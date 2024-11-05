@@ -65,3 +65,7 @@ twitch-archiver-1  | [cli][info] Closing currently open stream...
 avalon@homelab:~/docker/downloaders$ ls /mnt/hdd1/media/streams/ -lh
 -rwxrwxrwx 1 root root 5.9G Nov  5 01:38 '2024-11-04 15h21m44s paymoneywubby Live with Drip.mp4'
 ```
+
+The stream shows up on Plex for immediate playback while the stream downloads.
+
+![image](https://github.com/user-attachments/assets/2b32144e-f01c-45f3-96e3-3cc01fc88732)
