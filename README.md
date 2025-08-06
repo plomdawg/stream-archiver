@@ -3,7 +3,7 @@
 This is a Docker container that auto-archives live streams from **Twitch** and **Kick**.
 
 For Twitch streams, it uses an OAuth token to avoid ads on subscribed channels.
-For Kick streams, it uses the public API to monitor channels.
+For Kick streams, it uses streamlink with a custom plugin to monitor and download streams.
 
 I set this up to download streams to a folder served by Plex.
 
@@ -56,7 +56,7 @@ docker compose up -d
 
 ### Kick ⚡
 - **Requirements**: Just channel names (no authentication needed)  
-- **Features**: Direct stream recording using public API
+- **Features**: Direct stream recording using custom streamlink plugin
 - **Setup**: Simply add channel names to `KICK_CHANNELS`
 
 You can configure **both platforms simultaneously** or use just one - the archiver will automatically detect which platforms are configured and monitor accordingly.
@@ -66,7 +66,7 @@ You can configure **both platforms simultaneously** or use just one - the archiv
 ```console
 avalon@homelab:~/docker/downloaders$ docker compose logs stream-archiver 
 stream-archiver-1  | 2024-11-04 01:00:16,432 - INFO - 🎮 Successfully authenticated with Twitch API
-stream-archiver-1  | 2024-11-04 01:00:16,433 - INFO - ⚡ Successfully initialized Kick API client
+stream-archiver-1  | 2024-11-04 01:00:16,433 - INFO - ⚡ Successfully initialized Kick platform
 stream-archiver-1  | 2024-11-04 01:00:16,434 - INFO - 🚀 Starting Stream Archiver - monitoring Twitch: paymoneywubby | Kick: paymoneywubby
 stream-archiver-1  | 2024-11-04 15:21:44,268 - INFO - 🔴 Starting download for Twitch channel paymoneywubby - Live with Drip
 twitch-archiver-1  | [cli][info] streamlink is running as root! Be careful!

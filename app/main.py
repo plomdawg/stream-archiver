@@ -1,15 +1,16 @@
 import os
-import time
+import sys
 import logging
 from datetime import datetime
 import asyncio
-import subprocess
-import signal
 from abc import ABC, abstractmethod
 from typing import Dict, List, Optional, Any
 from twitchAPI.helper import first
 from twitchAPI.twitch import Twitch
-from kickapi import KickAPI
+
+# Add plugins directory to Python path so we can import from kick.py
+sys.path.append("/app/plugins")
+from kick import get_kick_stream_info
 
 # Configure logging with timestamps and log levels
 logging.basicConfig(
@@ -50,6 +51,10 @@ class StreamPlatform(ABC):
     def get_platform_shortname(self) -> str:
         """Get the platform shortname for the output file"""
         pass
+
+    def get_stream_title(self, stream_data: Any) -> str:
+        """Extract stream title from stream data - default implementation"""
+        return "Live Stream"
 
 
 class TwitchPlatform(StreamPlatform):
@@ -111,33 +116,34 @@ class TwitchPlatform(StreamPlatform):
     def get_platform_shortname(self) -> str:
         return "ttv"
 
+    def get_stream_title(self, stream_data: Any) -> str:
+        """Extract stream title from Twitch stream data"""
+        print(stream_data)
+        if stream_data and hasattr(stream_data, "title"):
+            return stream_data.title
+        return "Live Stream"
+
 
 class KickPlatform(StreamPlatform):
     """Kick streaming platform implementation"""
 
     def __init__(self, config: Dict[str, Any]):
         super().__init__(config)
-        self.kick_api = KickAPI()
 
     async def setup_client(self):
         """Initialize the Kick API client"""
-        logger.info("⚡ Successfully initialized Kick API client")
+        logger.info("⚡ Successfully initialized Kick platform")
 
     async def is_stream_live(self, channel: str) -> tuple[bool, Optional[Any]]:
-        """Check if a Kick stream is live"""
+        """Check if a Kick stream is live using our kick.py helper"""
         try:
-            # Get channel data
-            channel_data = self.kick_api.channel(channel)
-            if not channel_data:
-                logger.warning(f"⚠️ Could not find Kick channel: {channel}")
-                return False, None
+            # Use our helper function from kick.py to get stream info
+            stream_info = get_kick_stream_info(channel)
 
-            # Check if stream is live by looking at playback URL
-            # The KickAPI library provides channel.playback which indicates live status
-            is_live = (
-                hasattr(channel_data, "playback") and channel_data.playback is not None
-            )
-            return is_live, channel_data
+            if stream_info and stream_info.get("is_live"):
+                return True, stream_info
+            else:
+                return False, None
 
         except Exception as e:
             logger.error(f"❌ Error checking Kick status for {channel}: {str(e)}")
@@ -166,6 +172,12 @@ class KickPlatform(StreamPlatform):
 
     def get_platform_shortname(self) -> str:
         return "kick"
+
+    def get_stream_title(self, stream_data: Any) -> str:
+        """Extract stream title from Kick stream data"""
+        if isinstance(stream_data, dict) and "session_title" in stream_data:
+            return stream_data["session_title"]
+        return "Kick Live Stream"
 
 
 class StreamArchiver:
@@ -246,7 +258,7 @@ class StreamArchiver:
 
         # Validate Twitch OAuth token format if present
         for platform_name, (platform, channels) in self.platforms.items():
-            if platform_name == "twitch" and hasattr(platform.config, "oauth_token"):
+            if platform_name == "twitch" and "oauth_token" in platform.config:
                 if not platform.config["oauth_token"].startswith("oauth:"):
                     raise ValueError("TWITCH_OAUTH_TOKEN must start with 'oauth:'")
 
@@ -265,7 +277,7 @@ class StreamArchiver:
 
                     if is_live and channel_key not in self.active_downloads:
                         # Stream is live and not being recorded
-                        title = self._get_stream_title(stream_data, platform_name)
+                        title = platform.get_stream_title(stream_data)
                         logger.info(
                             f"🔴 Starting download for {platform.get_platform_name()} channel {channel} - {title}"
                         )
@@ -285,15 +297,6 @@ class StreamArchiver:
                         f"❌ Error checking status for {platform.get_platform_name()} channel {channel}: {str(e)}"
                     )
 
-    def _get_stream_title(self, stream_data: Any, platform_name: str) -> str:
-        """Extract stream title from stream data"""
-        if platform_name == "twitch" and stream_data:
-            return stream_data.title
-        elif platform_name == "kick" and stream_data:
-            # For Kick, we might not have a title in the same format
-            return getattr(stream_data, "bio", "Live Stream") or "Live Stream"
-        return "Live Stream"
-
     async def _start_download(
         self,
         platform_name: str,
@@ -310,10 +313,14 @@ class StreamArchiver:
             channel (str): The channel name
             stream_data: Stream object from platform API
         """
-        timestamp = datetime.now().strftime("%Y-%m-%d %Hh%Mm%Ss")
-        title = self._get_stream_title(stream_data, platform_name)
-        safe_title = title.replace("/", "_")[:200] if title else "Unknown Title"
-        filename = f"{timestamp} {platform_name}_{channel} {safe_title}.mp4"
+        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M")
+        title = platform.get_stream_title(stream_data)
+        safe_title = (
+            title.replace("/", "_").replace("\\", "_")[:200]
+            if title
+            else "Unknown Title"
+        )
+        filename = f"{timestamp} {platform.get_platform_shortname()} {channel} {safe_title}.mp4"
         output_file = os.path.join(self.output_dir, filename)
 
         # Get platform-specific streamlink command
@@ -339,7 +346,8 @@ class StreamArchiver:
         if channel_key in self.active_downloads:
             try:
                 self.active_downloads[channel_key].terminate()
-            except:
+            except (ProcessLookupError, OSError):
+                # Process already terminated or doesn't exist
                 pass
             del self.active_downloads[channel_key]
 

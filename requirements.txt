@@ -1,3 +1,2 @@
 twitchAPI
-KickApi
 cloudscraper

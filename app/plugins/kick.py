@@ -7,13 +7,7 @@ import re
 from streamlink.plugin import Plugin, pluginmatcher, PluginError
 from streamlink.stream import HLSStream
 
-try:
-    import cloudscraper
-except ImportError:
-    # Fallback to regular requests if cloudscraper is not available
-    import requests as cloudscraper
-
-    cloudscraper.create_scraper = lambda: cloudscraper.Session()
+import cloudscraper
 
 
 @pluginmatcher(re.compile(r"https?://(?:www\.)?kick\.com/(?P<channel>[^/?&]+)"))
@@ -111,6 +105,43 @@ class KickPlugin(Plugin):
         except Exception as e:
             self.logger.error(f"Error fetching clip for {clip_id}: {str(e)}")
             raise PluginError(f"Failed to get clip data: {str(e)}")
+
+
+def get_kick_stream_info(channel: str) -> dict:
+    """
+    Helper function to get Kick stream information for a channel.
+    Returns dict with 'is_live', 'title', etc. or empty dict if error.
+    """
+    try:
+        scraper = cloudscraper.create_scraper()
+        response = scraper.get(f"https://kick.com/api/v2/channels/{channel}/livestream")
+        response.raise_for_status()
+        data = response.json()
+
+        if not data or not data.get("data"):
+            return {}
+
+        stream_data = data["data"]
+        playback_url = stream_data.get("playback_url")
+
+        # Extract stream info
+        result = {
+            "is_live": bool(playback_url),
+            "channel": channel,
+        }
+
+        if playback_url:
+            # Stream is live, get additional metadata
+            result["session_title"] = stream_data.get(
+                "session_title", f"Kick Stream - {channel}"
+            )
+            result["playback_url"] = playback_url
+
+        return result
+
+    except Exception as e:
+        # Return empty dict on any error
+        return {}
 
 
 __plugin__ = KickPlugin
