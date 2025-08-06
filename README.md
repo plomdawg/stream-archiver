@@ -9,6 +9,44 @@ I set this up to download streams to a folder served by Plex.
 
 ## Usage
 
+### Quick Start
+
+Twitch only:
+
+```bash
+docker run -d \
+  -v ./output:/output \
+  -e TWITCH_CLIENT_ID=your_client_id \
+  -e TWITCH_CLIENT_SECRET=your_client_secret \
+  -e TWITCH_OAUTH_TOKEN=oauth:your_token_here \
+  -e TWITCH_CHANNELS=paymoneywubby \
+  avalonlee/stream-archiver:latest
+```
+
+Kick only:
+
+```bash
+docker run -d \
+  -v ./output:/output \
+  -e KICK_CHANNELS=paymoneywubby \
+  avalonlee/stream-archiver:latest
+```
+
+Both:
+
+```bash
+docker run -d \
+  -v ./output:/output \
+  -e TWITCH_CLIENT_ID=your_client_id \
+  -e TWITCH_CLIENT_SECRET=your_client_secret \
+  -e TWITCH_OAUTH_TOKEN=oauth:your_token_here \
+  -e TWITCH_CHANNELS=paymoneywubby \
+  -e KICK_CHANNELS=paymoneywubby \
+  avalonlee/stream-archiver:latest
+```
+
+### Using Docker Compose
+
 1. Create a docker-compose.yaml
 
 ```yaml
@@ -65,31 +103,25 @@ You can configure **both platforms simultaneously** or use just one - the archiv
 
 ```console
 avalon@homelab:~/docker/downloaders$ docker compose logs stream-archiver 
-stream-archiver-1  | 2024-11-04 01:00:16,432 - INFO - 🎮 Successfully authenticated with Twitch API
-stream-archiver-1  | 2024-11-04 01:00:16,433 - INFO - ⚡ Successfully initialized Kick platform
-stream-archiver-1  | 2024-11-04 01:00:16,434 - INFO - 🚀 Starting Stream Archiver - monitoring Twitch: paymoneywubby | Kick: paymoneywubby
-stream-archiver-1  | 2024-11-04 15:21:44,268 - INFO - 🔴 Starting download for Twitch channel paymoneywubby - Live with Drip
-twitch-archiver-1  | [cli][info] streamlink is running as root! Be careful!
-twitch-archiver-1  | [cli][info] Found matching plugin twitch for URL https://twitch.tv/paymoneywubby
-twitch-archiver-1  | [cli][info] Available streams: audio_only, 160p (worst), 360p, 480p, 720p, 1080p (best)
-twitch-archiver-1  | [cli][info] Opening stream: 1080p (hls)
-twitch-archiver-1  | [cli][info] Writing output to
-twitch-archiver-1  | /output/2024-11-04 15h21m44s paymoneywubby Live with Drip.mp4
-twitch-archiver-1  | [plugins.twitch][info] Will skip ad segments
-twitch-archiver-1  | [plugins.twitch][info] Waiting for pre-roll ads to finish, be patient
-twitch-archiver-1  | [stream.hls][info] Filtering out segments and pausing stream output
-twitch-archiver-1  | [stream.hls][warning] Encountered a stream discontinuity. This is unsupported and will result in incoherent output data.
-twitch-archiver-1  | [stream.hls][info] Resuming stream output
-stream-archiver-1  | 2024-11-04 17:38:16,866 - INFO - ⏹️ Stream ended for Twitch channel paymoneywubby - stopping download
-twitch-archiver-1  | [cli][info] Stream ended
-twitch-archiver-1  | Interrupted! Exiting...
-twitch-archiver-1  | [cli][info] Closing currently open stream...
+stream-archiver-1  | 2025-08-05 23:00:29,935 - INFO - 🎮 Successfully authenticated with Twitch API
+stream-archiver-1  | 2025-08-05 23:00:29,935 - INFO - ⚡ Successfully initialized Kick platform
+stream-archiver-1  | 2025-08-05 23:00:29,935 - INFO - 🚀 Starting Stream Archiver - monitoring Twitch: paymoneywubby | Kick: paymoneywubby
+stream-archiver-1  | 2025-08-05 23:00:31,050 - INFO - 🔴 Starting download for Kick channel paymoneywubby - Live with Drip
+stream-archiver-1  | [cli][info] streamlink is running as root! Be careful!
+stream-archiver-1  | [cli][info] Found matching plugin kick for URL https://kick.com/paymoneywubby
+stream-archiver-1  | [cli][info] Available streams: 160p (worst), 360p, 480p, 720p, 1080p (best)
+stream-archiver-1  | [cli][info] Opening stream: 1080p (hls)
+stream-archiver-1  | [cli][info] Writing output to
+stream-archiver-1  | /output/2025-08-05 23:00 kick paymoneywubby Live with Drip.mp4
+stream-archiver-1  | [cli][info] Stream ended
+stream-archiver-1  | [cli][info] Closing currently open stream...
+stream-archiver-1  | 2025-08-06 08:08:44,480 - INFO - ⏹️ Stream ended for Kick channel paymoneywubby - stopping download
 
-avalon@homelab:~/docker/downloaders$ ls /mnt/hdd1/media/streams/ -lh
--rwxrwxrwx 1 root root 5.9G Nov  5 01:38 '2024-11-04 15h21m44s ttv paymoneywubby Live with Drip.mp4'
--rwxrwxrwx 1 root root 3.2G Nov  5 02:15 '2024-11-04 16h15m22s kick paymoneywubby Gambling Stream.mp4'
+avalon@homelab:~/docker/downloaders$ ls /nas/streams/ -lh
+-rwxrwxrwx 1 root root 2.9G Aug  5 01:38 '2025-08-05 23:00 kick paymoneywubby Live with Drip.mp4'
+-rwxrwxrwx 1 root root 1.5G Aug  4 02:15 '2025-08-04 15:21 ttv paymoneywubby MEDIA SHARE.mp4'
 ```
 
-The stream shows up on Plex for immediate playback while the stream downloads.
+The stream shows up on my Plex server for immediate playback while the stream downloads.
 
 ![image](https://github.com/user-attachments/assets/2b32144e-f01c-45f3-96e3-3cc01fc88732)
