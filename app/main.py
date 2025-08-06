@@ -312,7 +312,7 @@ class StreamArchiver:
         """
         timestamp = datetime.now().strftime("%Y-%m-%d %Hh%Mm%Ss")
         title = self._get_stream_title(stream_data, platform_name)
-        safe_title = title.replace("/", "_")[:50] if title else "Live Stream"
+        safe_title = title.replace("/", "_")[:200] if title else "Unknown Title"
         filename = f"{timestamp} {platform_name}_{channel} {safe_title}.mp4"
         output_file = os.path.join(self.output_dir, filename)
 
