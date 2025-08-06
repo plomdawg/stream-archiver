@@ -1,4 +1,4 @@
-IMAGE_NAME = avalonlee/twitch-archiver
+IMAGE_NAME = avalonlee/stream-archiver
 VERSION = latest
 
 # Build the Docker image
