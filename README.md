@@ -7,9 +7,23 @@ For Kick streams, it uses streamlink with a custom plugin to monitor and downloa
 
 I set this up to download streams to a folder served by Plex.
 
+## Platform Support
+
+### Twitch 🎮
+- **Requirements**: Client ID, Client Secret, and OAuth Token
+- **Features**: Ad-free recording for subscribed channels
+- **Setup**: Get credentials from [Twitch Developer Console](https://dev.twitch.tv/console/apps) and OAuth token from [twitchapps.com](https://twitchapps.com/tmi/)
+
+### Kick ⚡
+- **Requirements**: Just channel names (no authentication needed)  
+- **Features**: Direct stream recording using custom streamlink plugin
+- **Setup**: Simply add channel names to `KICK_CHANNELS`
+
+You can configure **both platforms simultaneously** or use just one - the archiver will automatically detect which platforms are configured and monitor accordingly.
+
 ## Usage
 
-### Quick Start
+## Quick Start
 
 Twitch only:
 
@@ -84,20 +98,6 @@ services:
 ```bash
 docker compose up -d
 ```
-
-## Platform Support
-
-### Twitch 🎮
-- **Requirements**: Client ID, Client Secret, and OAuth Token
-- **Features**: Ad-free recording for subscribed channels
-- **Setup**: Get credentials from [Twitch Developer Console](https://dev.twitch.tv/console/apps) and OAuth token from [twitchapps.com](https://twitchapps.com/tmi/)
-
-### Kick ⚡
-- **Requirements**: Just channel names (no authentication needed)  
-- **Features**: Direct stream recording using custom streamlink plugin
-- **Setup**: Simply add channel names to `KICK_CHANNELS`
-
-You can configure **both platforms simultaneously** or use just one - the archiver will automatically detect which platforms are configured and monitor accordingly.
 
 ## Example Output
 
