@@ -12,6 +12,7 @@ try:
 except ImportError:
     # Fallback to regular requests if cloudscraper is not available
     import requests as cloudscraper
+
     cloudscraper.create_scraper = lambda: cloudscraper.Session()
 
 
@@ -23,7 +24,7 @@ class KickPlugin(Plugin):
 
     def __init__(self, a, url, options=None):
         super().__init__(a, url, options or {})
-        self.session = cloudscraper.create_scraper()
+        self.cloudscraper = cloudscraper.create_scraper()
 
     def _get_streams(self):
         channel = self.match.group("channel")
@@ -42,7 +43,7 @@ class KickPlugin(Plugin):
     def _get_live_streams(self, channel):
         """Get live stream data"""
         try:
-            response = self.session.get(self._API_URL.format(channel=channel))
+            response = self.cloudscraper.get(self._API_URL.format(channel=channel))
             response.raise_for_status()
             data = response.json()
 
@@ -66,7 +67,7 @@ class KickPlugin(Plugin):
     def _get_vod_streams(self, video_id):
         """Get VOD stream data"""
         try:
-            response = self.session.get(self._VOD_URL.format(video_id=video_id))
+            response = self.cloudscraper.get(self._VOD_URL.format(video_id=video_id))
             response.raise_for_status()
             data = response.json()
 
@@ -90,7 +91,7 @@ class KickPlugin(Plugin):
     def _get_clip_streams(self, clip_id):
         """Get clip stream data"""
         try:
-            response = self.session.get(self._CLIP_URL.format(clip_id=clip_id))
+            response = self.cloudscraper.get(self._CLIP_URL.format(clip_id=clip_id))
             response.raise_for_status()
             data = response.json()
 
