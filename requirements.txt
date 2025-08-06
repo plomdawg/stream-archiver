@@ -1,1 +1,3 @@
 twitchAPI
+KickApi
+cloudscraper
