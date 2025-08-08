@@ -124,4 +124,4 @@ avalon@homelab:~/docker/downloaders$ ls /nas/streams/ -lh
 
 The stream shows up on my Plex server for immediate playback while the stream downloads.
 
-![image](https://github.com/user-attachments/assets/2b32144e-f01c-45f3-96e3-3cc01fc88732)
+<img width="871" height="290" alt="image" src="https://github.com/user-attachments/assets/0efe89b7-8e11-416c-8d9b-c4fa283b3a97" />
