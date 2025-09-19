@@ -1,4 +1,4 @@
 twitchAPI
 cloudscraper
-faster-whisper
-srt
+openai-whisper
+torch

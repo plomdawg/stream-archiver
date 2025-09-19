@@ -1,14 +1,11 @@
 import os
 import asyncio
 from typing import Dict, Any
-from datetime import timedelta
 
-import srt
-from faster_whisper import WhisperModel
 try:
-    import ctranslate2  # type: ignore
+    import torch  # type: ignore
 except Exception:  # noqa: BLE001
-    ctranslate2 = None  # type: ignore
+    torch = None  # type: ignore
 
 
 def _write_srt(segments, srt_path: str):
@@ -34,7 +31,7 @@ def _resolve_device(device_pref: str) -> str:
         return "cpu"
     if device_pref == "auto":
         try:
-            if ctranslate2 is not None and ctranslate2.get_device_count("cuda") > 0:  # type: ignore[attr-defined]
+            if torch is not None and hasattr(torch, "cuda") and torch.cuda.is_available():  # type: ignore[attr-defined]
                 return "cuda"
         except Exception:  # noqa: BLE001
             pass
@@ -42,34 +39,45 @@ def _resolve_device(device_pref: str) -> str:
     return device_pref
 
 
-def _transcribe_sync(video_file: str, cfg: Dict[str, Any]) -> str:
+def _build_whisper_cmd(video_file: str, cfg: Dict[str, Any]) -> list[str]:
     model_size = cfg.get("model", "base")
     language = cfg.get("language", "en")
-    device_pref = cfg.get("device", "auto")
-    device = _resolve_device(device_pref)
+    device = _resolve_device(cfg.get("device", "auto"))
 
-    compute_type = "int8" if device == "cpu" else "float16"
-    model = WhisperModel(model_size, device=device, compute_type=compute_type)
-
-    segments, _ = model.transcribe(
+    output_dir = os.path.dirname(video_file) or "."
+    cmd = [
+        "whisper",
+        "--model",
+        model_size,
+        "--language",
+        language,
+        "--output_format",
+        "srt",
+        "--device",
+        device,
+        "--output_dir",
+        output_dir,
         video_file,
-        language=language,
-        task="transcribe",
-        vad_filter=True,
-    )
-
-    base, _ = os.path.splitext(video_file)
-    srt_path = f"{base}.srt"
-    _write_srt(segments, srt_path)
-    return srt_path
+    ]
+    return cmd
 
 
 async def transcribe_post(video_file: str, cfg: Dict[str, Any], logger) -> str:
-    logger.info(f"📝 Starting transcription for {os.path.basename(video_file)}")
+    device = _resolve_device(cfg.get("device", "auto"))
+    model_size = cfg.get("model", "base")
+    logger.info(
+        f"📝 Starting transcription for {os.path.basename(video_file)} (model={model_size}, device={device})"
+    )
+    cmd = _build_whisper_cmd(video_file, cfg)
     try:
-        srt_path = await asyncio.to_thread(_transcribe_sync, video_file, cfg)
-        logger.info(f"✅ Transcription completed: {os.path.basename(srt_path)}")
-        return srt_path
+        proc = await asyncio.create_subprocess_exec(*cmd)
+        rc = await proc.wait()
+        base, _ = os.path.splitext(video_file)
+        srt_path = f"{base}.srt"
+        if rc == 0 and os.path.exists(srt_path):
+            logger.info(f"✅ Transcription completed: {os.path.basename(srt_path)}")
+            return srt_path
+        raise RuntimeError(f"whisper exited with code {rc}")
     except Exception as exc:  # noqa: BLE001
         logger.error(f"❌ Transcription failed for {os.path.basename(video_file)}: {str(exc)}")
         raise

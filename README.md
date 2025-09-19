@@ -61,7 +61,7 @@ docker run -d \
 
 ### Transcriptions (optional)
 
-Set environment variables to enable post-processing transcriptions using faster-whisper. Generates an `.srt` next to each video after it finishes.
+Set environment variables to enable post-processing transcriptions using Whisper CLI. Generates an `.srt` next to each video after it finishes.
 
 - **TRANSCRIBE**: `true|false` (default: false)
 - **TRANSCRIBE_MODEL**: model size (default: `base`) — try `tiny`/`small` for CPU
