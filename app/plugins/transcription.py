@@ -1,7 +1,9 @@
 import os
 import asyncio
 from typing import Dict, Any
+from datetime import timedelta
 
+import srt
 from faster_whisper import WhisperModel
 try:
     import ctranslate2  # type: ignore
@@ -9,28 +11,22 @@ except Exception:  # noqa: BLE001
     ctranslate2 = None  # type: ignore
 
 
-def _format_timestamp(seconds: float) -> str:
-    total_ms = int(round(seconds * 1000))
-    hours = total_ms // 3_600_000
-    remainder = total_ms % 3_600_000
-    minutes = remainder // 60_000
-    remainder = remainder % 60_000
-    secs = remainder // 1000
-    millis = remainder % 1000
-    return f"{hours:02d}:{minutes:02d}:{secs:02d},{millis:03d}"
-
-
 def _write_srt(segments, srt_path: str):
-    with open(srt_path, "w", encoding="utf-8") as srt_file:
-        for index, segment in enumerate(segments, start=1):
-            start_time = _format_timestamp(segment.start)
-            end_time = _format_timestamp(segment.end)
-            text = (segment.text or "").strip()
-            if not text:
-                continue
-            srt_file.write(f"{index}\n")
-            srt_file.write(f"{start_time} --> {end_time}\n")
-            srt_file.write(f"{text}\n\n")
+    subtitles = []
+    index = 1
+    for segment in segments:
+        text = (segment.text or "").strip()
+        if not text:
+            continue
+        start_td = timedelta(seconds=float(segment.start))
+        end_td = timedelta(seconds=float(segment.end))
+        subtitles.append(
+            srt.Subtitle(index=index, start=start_td, end=end_td, content=text)
+        )
+        index += 1
+    srt_text = srt.compose(subtitles)
+    with open(srt_path, "w", encoding="utf-8") as f:
+        f.write(srt_text)
 
 
 def _resolve_device(device_pref: str) -> str:
