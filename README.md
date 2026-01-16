@@ -59,6 +59,44 @@ docker run -d \
   avalonlee/stream-archiver:latest
 ```
 
+### Transcriptions (optional)
+
+Set environment variables to enable post-processing transcriptions using Whisper CLI. Generates an `.srt` next to each video after it finishes.
+
+- **TRANSCRIBE**: `true|false` (default: false)
+- **TRANSCRIBE_MODEL**: model size (default: `base`) — try `tiny`/`small` for CPU
+- **TRANSCRIBE_LANGUAGE**: language code (default: `en`)
+- **TRANSCRIBE_DEVICE**: `auto|cpu|cuda` (default: `auto`)
+
+CPU run example:
+
+```bash
+docker run -d \
+  -v ./output:/output \
+  -e KICK_CHANNELS=paymoneywubby \
+  -e TRANSCRIBE=true \
+  -e TRANSCRIBE_MODEL=small \
+  -e TRANSCRIBE_LANGUAGE=en \
+  avalonlee/stream-archiver:latest
+```
+
+GPU run example (requires NVIDIA runtime and GPU exposure):
+
+```bash
+docker run -d \
+  --gpus all \
+  -v ./output:/output \
+  -e KICK_CHANNELS=paymoneywubby \
+  -e TRANSCRIBE=true \
+  -e TRANSCRIBE_DEVICE=cuda \
+  avalonlee/stream-archiver:latest
+```
+
+Notes:
+- CPU is slower on long VODs; prefer `tiny`/`small` models for speed.
+- With `TRANSCRIBE_DEVICE=auto`, the app attempts CUDA and falls back to CPU.
+- Subtitles are produced after recording completes; live SRT is not enabled in v1.
+
 ### Using Docker Compose
 
 1. Create a docker-compose.yaml
@@ -87,6 +125,12 @@ services:
       - CHECK_INTERVAL=30
       # Your timezone, e.g., America/New_York, Europe/London, etc.
       - TZ=America/Los_Angeles
+      # === TRANSCRIPTION (optional) ===
+      - TRANSCRIBE=false
+      - TRANSCRIBE_MODEL=base
+      - TRANSCRIBE_LANGUAGE=en
+      # auto tries CUDA and falls back to CPU
+      - TRANSCRIBE_DEVICE=auto
     volumes:
       # Where to store the downloaded videos
       - ./output:/output

@@ -1,2 +1,4 @@
 twitchAPI
 cloudscraper
+openai-whisper
+torch

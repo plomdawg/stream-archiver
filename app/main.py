@@ -11,6 +11,7 @@ from twitchAPI.twitch import Twitch
 # Add plugins directory to Python path so we can import from kick.py
 sys.path.append("/app/plugins")
 from kick import get_kick_stream_info
+from transcription import transcribe_post
 
 # Configure logging with timestamps and log levels
 logging.basicConfig(
@@ -193,6 +194,14 @@ class StreamArchiver:
         # Dictionary to track active downloads
         self.active_downloads = {}
 
+        # Transcription configuration
+        self.transcribe_enabled = os.getenv("TRANSCRIBE", "false").lower() == "true"
+        self.transcribe_cfg = {
+            "model": os.getenv("TRANSCRIBE_MODEL", "base"),
+            "language": os.getenv("TRANSCRIBE_LANGUAGE", "en"),
+            "device": os.getenv("TRANSCRIBE_DEVICE", "auto"),
+        }
+
         # Create necessary directories
         os.makedirs(self.output_dir, exist_ok=True)
 
@@ -331,9 +340,11 @@ class StreamArchiver:
         channel_key = f"{platform_name}:{channel}"
         try:
             # Start streamlink process
-            self.active_downloads[channel_key] = await asyncio.create_subprocess_exec(
-                *streamlink_command
-            )
+            proc = await asyncio.create_subprocess_exec(*streamlink_command)
+            self.active_downloads[channel_key] = {
+                "proc": proc,
+                "output_file": output_file,
+            }
 
         except Exception as e:
             logger.error(
@@ -344,12 +355,33 @@ class StreamArchiver:
     def _stop_download(self, channel_key: str):
         """Stop and cleanup active downloads."""
         if channel_key in self.active_downloads:
+            rec = self.active_downloads[channel_key]
+            proc = rec.get("proc")
+            output_file = rec.get("output_file")
             try:
-                self.active_downloads[channel_key].terminate()
+                if proc is not None:
+                    proc.terminate()
             except (ProcessLookupError, OSError):
                 # Process already terminated or doesn't exist
                 pass
             del self.active_downloads[channel_key]
+
+            # Kick off post transcription asynchronously (do not block)
+            if self.transcribe_enabled and output_file:
+                asyncio.create_task(self._wait_and_transcribe(proc, output_file))
+
+    async def _wait_and_transcribe(self, proc, video_file: str):
+        # Ensure process has fully exited before transcribing to avoid partial writes
+        try:
+            if proc is not None:
+                await proc.wait()
+        except Exception:
+            pass
+        try:
+            await transcribe_post(video_file, self.transcribe_cfg, logger)
+        except Exception:
+            # Errors are already logged in the transcription module
+            pass
 
     async def run(self):
         """Main execution loop."""
